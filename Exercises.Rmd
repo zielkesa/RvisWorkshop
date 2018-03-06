@@ -1,0 +1,189 @@
+ ---
+title: "Exercises in R Visualization"
+author: "Duncan Murdoch"
+date: '2018-03-03'
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+```
+
+## ggplot2
+
+Some of these exercises are based on ones in Hadley Wickham's book.
+
+1.  In the lectures, I used the `mtcars` dataset.
+The `ggplot2` package includes a similar but more recent dataset called `mpg`.
+    a.  Display the first few lines of the dataset, and read the
+    help page describing it.
+```{r}
+head(mpg)
+?mpg
+```
+    b.  Draw a scatterplot of city miles per gallon versus highway miles per gallon. 
+```{r}
+ggplot(mpg, aes(cty, hwy)) + geom_point()
+```
+    c.  Compare using `geom_point()` to using `geom_jitter()`.
+    What are the advantages of each?
+```{r}
+ggplot(mpg, aes(cty, hwy)) + geom_jitter()
+#jitter adds some randomness to the data. Makes it look less categorical
+#if the data set is small.
+```
+    d.  Use  `geom_smooth()` to add a smooth nonparametric
+regression line to the plot.
+```{r}
+ggplot(mpg, aes(cty, hwy)) + geom_point() + geom_smooth()
+```
+    e.  Set the colour of the points according to the class
+    of the vehicle.  (You still only want one smooth line, so
+    do this carefully!)
+```{r}
+ggplot(mpg, aes(cty, hwy)) + geom_point(aes(colour = class))  +
+  geom_smooth()
+```
+    f.  Instead of using colour to indicate the class, 
+    use separate facets for each class.
+```{r}
+ggplot(mpg, aes(cty, hwy)) + geom_point() + facet_wrap(~ class)
+```
+    g.  Use facetting to explore the relationship between fuel
+    economy, engine size, and number of cylinders.
+```{r}
+ggplot(mpg, aes(displ, cty)) + geom_point() + facet_grid(~cyl)
+```
+    h.  Use `geom_abline()` to add the line `y = x`.
+```{r}
+ggplot(mpg, aes(hwy, cty)) + geom_point() +
+  geom_abline(a = 0, b = 1) #not entirly sure this is what is being asked for.
+```
+    i.  Modify the plot to give more informative axis labels,
+    and a more pleasing appearance according to your own taste.
+```{r}
+ggplot(mpg, aes(hwy, cty)) + geom_point() +
+  geom_abline(a = 0, b = 1) + theme_classic() +
+  ylab("City") + xlab("Highway")
+```
+
+
+2.  Again using the `mpg` dataset, draw boxplots (`geom_boxplot`) of highway mileage for each drive type.  Try
+a scatterplot with the same aesthetics.  Which is better?  What
+else would work?
+```{r}
+box2 <- ggplot(mpg, aes(trans, cty)) + geom_boxplot()
+scatter2 <- ggplot(mpg, aes(trans, cty)) + geom_point()
+library(gridExtra)
+grid.arrange(box2, scatter2, ncol=2)
+```
+
+3.  Still with the `mpg` dataset, draw boxplots for each manufacturer.  You might find the labels too small, or they
+may overlap each other.  You can change the font size using
+`theme(axis.text.x = element_text(size = 12))`.  Other arguments
+to `element_text` that you should try are `angle` (to rotate the text, try `angle = -30`), `hjust` (horizontal justification of 
+text; try `hjust = 0` or `hjust = 1`).
+```{r}
+box3 <- ggplot(mpg, aes(manufacturer, cty)) + geom_boxplot() +
+  theme(axis.text.x = element_text(angle = -30, hjust = -0.3))
+box3
+```
+
+4.  You can draw more than one dataset on the same plot.  For example, to calculate the mean of each numeric variable for each class
+of vehicle in `mpg`, you can use the R code
+`classmeans <- aggregate(mpg[, c(3,4,5,8,9)], list(class=mpg$class), mean)`
+To add class mean labels to a scatterplot of `mpg` data, use `geom_text(label = classmeans$class, data=classmeans)`.  Compare
+the display if you use `geom_label` instead of `geom_text`.
+```{r}
+classmeans <- aggregate(mpg[, c(3,4,5,8,9)], list(class=mpg$class), mean)
+ggplot() + geom_point(data = mpg, aes(hwy, cty)) + 
+  geom_point(data = classmeans, aes(hwy, cty), colour = 'green')+ 
+  geom_text(label = classmeans$class, data=classmeans, aes(hwy, cty))
+```
+
+5.  The `economics` dataset contains some US economic time series.
+    a. Use `geom_line()` to plot the unemployment rate (number
+    unemployed divided by population) versus the date.
+```{r}
+ggplot(economics, aes(date, unemploy)) + geom_line()
+```
+    b. Try using `geom_polygon()` instead of `geom_line()`.  What is this geom doing?  Can you think of a way to make it more useful?
+```{r}
+ggplot(economics, aes(date, unemploy)) + geom_polygon()
+```
+    
+## rgl
+
+1.  Our first plot will continue with the `mpg` dataset from
+`ggplot2`.  
+    a. Use `plot3d` to plot city and highway mileage
+against engine displacement.
+```{r}
+library(rgl)
+plot3d(mpg[,c(3,8,9)])
+rglwidget()
+```
+    b. Try with `type = 's'` instead of the default `type = 'p'`.
+```{r}
+plot3d(mpg[,c(3,8,9)], type = "s")
+rglwidget()
+```
+    c. The default colour of black makes the plot kind of ugly.  Use `RColorBrewer`
+to get a palette of 7 colours, and set the colours of the spheres based on class of vehicle.  (This is a little tricky.  I did it by naming the palette to the 7 names of the classes, then
+using argument `col = palette[mpg$class]`.)
+```{r}
+library(magrittr)
+library(RColorBrewer)
+palette <- brewer.pal(7, "Set3")
+names(palette) <- as.factor(mpg$class) %>% levels
+plot3d(mpg[,c(3,8,9)], type = "s",
+       col = palette[mpg$class])
+rglwidget()
+```
+    d.  Use `legend3d` to add a legend showing the classes.  (Again, a little tricky:  look at the help for `legend` to 
+see the possible arguments to `legend3d`.)
+```{r}
+palette <- brewer.pal(7, "Set3")
+names(palette) <- as.factor(mpg$class) %>% levels
+plot3d(mpg[,c(3,8,9)], type = "s",
+       col = palette[mpg$class])
+legend3d(x = "right", legend = names(palette), text.col = palette)
+rglwidget()
+```
+
+2.  In the lecture, I fit the model `lm(z ~ polym(x, y, degree = 2))` to some simulated data where the true mean was cubic
+in `x` and `y`.  
+    a. Setting `degree = 3`, repeat the calculations
+and plot an additional surface in a different colour.  Does it look like an improved fit?
+```{r}
+n <- 100 
+x <- runif(n)
+y <- runif(n) 
+z <- x - x^3 + x*y + rnorm(n, sd = 0.1) 
+fit2 <- lm(z ~ polym(x, y, degree = 2))
+fit3 <- lm(z ~ polym(x, y, degree = 3))
+plot2 <- plot3d(x, y, z, type = "s", col = "green", size = 1) 
+surface2 <- deldir::deldir(x, y, z = predict(fit2), suppressMsge = TRUE) 
+surface3 <- deldir::deldir(x, y, z = predict(fit3), suppressMsge = TRUE)
+persp3d(surface2, add = TRUE) 
+persp3d(surface3, add = TRUE, col = "blue")
+rglwidget() #%>% toggleWidget()
+```
+    b. Use `rglwidget()` and `toggleWidget()` to create a
+    display where each of the points and the 2 surfaces can be
+    turned on and off.
+```{r}
+n <- 100 
+x <- runif(n)
+y <- runif(n) 
+z <- x - x^3 + x*y + rnorm(n, sd = 0.1) 
+fit2 <- lm(z ~ polym(x, y, degree = 2))
+fit3 <- lm(z ~ polym(x, y, degree = 3))
+plot2 <- plot3d(x, y, z, type = "s", col = "green", size = 1) 
+surface2 <- deldir::deldir(x, y, z = predict(fit2), suppressMsge = TRUE) 
+surface3 <- deldir::deldir(x, y, z = predict(fit3), suppressMsge = TRUE)
+surf2 <- persp3d(surface2, add = TRUE) 
+surf3 <- persp3d(surface3, add = TRUE, col = "blue")
+rglwidget() %>% toggleWidget(ids = surf2) %>% toggleWidget(ids = surf3)
+```
